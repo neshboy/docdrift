@@ -1,0 +1,21 @@
+name: "DocDrift"
+description: "Fail CI when Markdown docs reference files or symbols that no longer exist."
+branding:
+  icon: "check-circle"
+  color: "purple"
+inputs:
+  root:
+    description: "Repository root to check against. Defaults to GITHUB_WORKSPACE."
+    required: false
+  docs-glob:
+    description: "Comma-separated list of glob patterns for Markdown files to check. Defaults to docs/**/*.md,README.md."
+    required: false
+  extensions:
+    description: "Comma-separated list of source file extensions to scan for docdrift:symbol declarations."
+    required: false
+outputs:
+  broken-count:
+    description: "Number of broken references found."
+runs:
+  using: "node20"
+  main: "dist/action.cjs"
