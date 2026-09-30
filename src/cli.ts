@@ -55,9 +55,17 @@ export async function run(argv: string[]): Promise<CliRunResult> {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === "--root") {
-      root = args[++i];
+      const value = args[++i];
+      if (value === undefined) {
+        return { code: 1, output: `Missing value for "--root"\n\n${HELP_TEXT}` };
+      }
+      root = value;
     } else if (arg === "--ext") {
-      ext = args[++i]
+      const value = args[++i];
+      if (value === undefined) {
+        return { code: 1, output: `Missing value for "--ext"\n\n${HELP_TEXT}` };
+      }
+      ext = value
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
