@@ -34661,7 +34661,7 @@ var import_node_path2 = __toESM(require("path"), 1);
 function candidatePaths(rawPath, absoluteDocFile, root) {
   const candidates = [];
   const rootRelative = rawPath.startsWith("/") ? rawPath.slice(1) : rawPath;
-  candidates.push(import_node_path2.default.resolve(import_node_path2.default.dirname(absoluteDocFile), rawPath));
+  candidates.push(import_node_path2.default.resolve(import_node_path2.default.dirname(absoluteDocFile), rootRelative));
   candidates.push(import_node_path2.default.resolve(root, rootRelative));
   return Array.from(new Set(candidates));
 }
@@ -34734,32 +34734,35 @@ function escapeRegExp(s) {
 }
 function buildDeclarationPatterns(name) {
   const n = escapeRegExp(name);
+  const before = "(?<![\\w$])";
+  const after = "(?![\\w$])";
   return [
     // JS/TS/Java/C#/Go/Rust-ish function & type declarations.
-    new RegExp(`\\bfunction\\*?\\s+${n}\\b`),
-    new RegExp(`\\bclass\\s+${n}\\b`),
-    new RegExp(`\\binterface\\s+${n}\\b`),
-    new RegExp(`\\btype\\s+${n}\\b`),
-    new RegExp(`\\benum\\s+${n}\\b`),
-    new RegExp(`\\bstruct\\s+${n}\\b`),
-    new RegExp(`\\bfunc\\s+(?:\\([^)]*\\)\\s*)?${n}\\b`),
+    new RegExp(`\\bfunction\\*?\\s+${n}${after}`),
+    new RegExp(`\\bclass\\s+${n}${after}`),
+    new RegExp(`\\binterface\\s+${n}${after}`),
+    new RegExp(`\\btype\\s+${n}${after}`),
+    new RegExp(`\\benum\\s+${n}${after}`),
+    new RegExp(`\\bstruct\\s+${n}${after}`),
+    new RegExp(`\\bfunc\\s+(?:\\([^)]*\\)\\s*)?${n}${after}`),
     // Go (incl. methods with receiver)
-    new RegExp(`\\bfn\\s+${n}\\b`),
+    new RegExp(`\\bfn\\s+${n}${after}`),
     // Rust
     // Variable-ish declarations.
-    new RegExp(`\\b(?:export\\s+)?(?:const|let|var)\\s+${n}\\b`),
-    new RegExp(`\\bdef\\s+${n}\\b`),
+    new RegExp(`\\b(?:export\\s+)?(?:const|let|var)\\s+${n}${after}`),
+    new RegExp(`\\bdef\\s+${n}${after}`),
     // Python
     // "name = function/arrow" or "name: (..) => .." assignment styles.
-    new RegExp(`\\b${n}\\s*[:=]\\s*(?:async\\s+)?function\\b`),
-    new RegExp(`\\b${n}\\s*[:=]\\s*(?:async\\s*)?\\([^)]*\\)\\s*(?::[^=]+)?=>`),
+    new RegExp(`${before}${n}\\s*[:=]\\s*(?:async\\s+)?function\\b`),
+    new RegExp(`${before}${n}\\s*[:=]\\s*(?:async\\s*)?\\([^)]*\\)\\s*(?::[^=]+)?=>`),
     // Java/C#/C++ style method or field declaration: modifiers, a type, then the name and "(" or ";"/"=".
     new RegExp(
-      `\\b(?:public|private|protected|internal|static|final|readonly|virtual|override|abstract|async)\\s+[\\w<>\\[\\],.\\s]*?\\b${n}\\s*\\(`
+      `\\b(?:public|private|protected|internal|static|final|readonly|virtual|override|abstract|async)\\s+[\\w<>\\[\\],.\\s]*?${before}${n}\\s*\\(`
     )
   ];
 }
 var cachedFiles = null;
+var cachedLines = /* @__PURE__ */ new Map();
 async function listSourceFiles(opts) {
   const key = JSON.stringify({ root: opts.root, extensions: opts.extensions, ignore: opts.ignoreGlobs });
   if (cachedFiles && cachedFiles.key === key) return cachedFiles.files;
@@ -34778,18 +34781,27 @@ async function listSourceFiles(opts) {
 }
 function clearSymbolSearchCache() {
   cachedFiles = null;
+  cachedLines = /* @__PURE__ */ new Map();
+}
+function getFileLines(file) {
+  const cached = cachedLines.get(file);
+  if (cached) return cached;
+  let content3;
+  try {
+    content3 = import_node_fs2.default.readFileSync(file, "utf8");
+  } catch {
+    return void 0;
+  }
+  const lines = content3.split(/\r?\n/);
+  cachedLines.set(file, lines);
+  return lines;
 }
 async function findSymbolDeclaration(name, opts) {
   const patterns = buildDeclarationPatterns(name);
   const files = await listSourceFiles(opts);
   for (const file of files) {
-    let content3;
-    try {
-      content3 = import_node_fs2.default.readFileSync(file, "utf8");
-    } catch {
-      continue;
-    }
-    const lines = content3.split(/\r?\n/);
+    const lines = getFileLines(file);
+    if (!lines) continue;
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       if (patterns.some((re) => re.test(line))) {

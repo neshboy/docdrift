@@ -20,7 +20,7 @@ function candidatePaths(rawPath: string, absoluteDocFile: string, root: string):
   // Root-relative, e.g. "/src/foo.ts" -> "<root>/src/foo.ts".
   const rootRelative = rawPath.startsWith("/") ? rawPath.slice(1) : rawPath;
 
-  candidates.push(path.resolve(path.dirname(absoluteDocFile), rawPath));
+  candidates.push(path.resolve(path.dirname(absoluteDocFile), rootRelative));
   candidates.push(path.resolve(root, rootRelative));
 
   return Array.from(new Set(candidates));
